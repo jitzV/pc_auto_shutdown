@@ -1,0 +1,25 @@
+# C:\pc_shutdown_app\docker-compose.yml
+
+version: '3.8' # Specify the Docker Compose file format version
+
+services:
+  # Define your web application service
+  pc_shutdown_web:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    
+    # Map port 5000 from the host to port 5000 in the container
+    ports:
+      - "5000:5000"
+      
+    # Mount the host's C:/shutdown_signal directory into the container at /host_shared
+    volumes:
+      - C:/shutdown_signal:/host_shared
+      
+    # Assign a specific name to the container (optional, but good practice)
+    container_name: pc-shutdown-app
+    
+    # Define a restart policy (optional):
+    # 'unless-stopped' means the container will restart automatically if it stops,
+    # unless you explicitly stop it using 'docker compose stop'
+    restart: unless-stopped

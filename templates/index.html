@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Shutdown Timer</title>
+    <style>
+        body { font-family: sans-serif; margin: 50px; text-align: center; background-color: #f4f4f4; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background-color: white; }
+        h1, h2 { color: #333; }
+        hr { border: 0; height: 1px; background-color: #eee; margin: 20px 0; }
+        input[type="number"], input[type="time"] { padding: 10px; margin: 10px 0; width: 120px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 8px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 1em; transition: background-color 0.2s ease; }
+        button.cancel { background-color: #dc3545; }
+        button:hover { opacity: 0.9; background-color: #0056b3; }
+        button.cancel:hover { background-color: #c82333; }
+        #status { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; }
+        #status p { margin: 5px 0; color: #333; }
+        .current-signal { font-size: 0.9em; color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PC Shutdown Timer</h1>
+
+        <div id="status">
+            {% if timer_active %}
+                <p><strong>Timer is active.</strong> PC shut down to initate after: <strong>{{ next_run_time }}</strong></p>
+                <button class="cancel" onclick="cancelTimer()">Cancel Timer</button>
+            {% else %}
+                <p>No timer active.</p>
+            {% endif %}
+            <div class="current-signal">Internal signal status: {{ current_signal }}</div>
+        </div>
+
+        <hr>
+
+        <h2>Schedule Shutdown in Minutes</h2>
+        <form id="startTimerForm">
+            <label for="minutes">Shut down in (minutes):</label>
+            <input type="number" id="minutes" name="minutes" min="1" value="60">
+            <br>
+            <button type="submit">Start Timer</button>
+        </form>
+
+        <hr>
+
+        <h2>Schedule Shutdown at Specific Time</h2>
+        <form id="startSpecificTimeForm">
+            <label for="specific_time">Shut down at:</label>
+            <input type="time" id="specific_time" name="specific_time">
+            <br>
+            <button type="submit">Schedule Time</button>
+        </form>
+
+        <hr>
+
+        <h2>Immediate Shutdown</h2>
+        <button onclick="shutdownNow()">Shut Down Now</button>
+
+        <hr>
+
+        <div>
+          Current Time (EST): <span id="current-time"></span>
+        </div>
+    </div>
+
+    <script>
+        // Set default time to something sensible, or leave blank for user choice
+        // Example: set to current time + 1 hour for convenience
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const now = new Date();
+            now.setHours(now.getHours() + 1); // Default to 1 hour from now
+            now.setMinutes(now.getMinutes());
+            now.setSeconds(0);
+            now.setMilliseconds(0);
+            const defaultTime = now.toTimeString().split(' ')[0].substring(0, 5); // "HH:MM"
+            document.getElementById('specific_time').value = defaultTime;
+        });
+
+        function updateTime() {
+            const now = new Date();
+            // Convert to EST (America/New_York)
+            const estTime = now.toLocaleString("en-US", {timeZone: "America/New_York"});
+            document.getElementById('current-time').textContent = estTime;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        async function startTimer() {
+            const minutes = document.getElementById('minutes').value;
+            if (minutes < 1) {
+                alert("Please enter a positive number of minutes.");
+                return;
+            }
+            const response = await fetch('/start_timer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ minutes: minutes }),
+            });
+            const data = await response.json();
+            alert(data.message);
+            if (data.status === 'success') {
+                location.reload(); // Reload page to update UI status
+            }
+        }
+
+        async function startSpecificTimeTimer() {
+            const specificTime = document.getElementById('specific_time').value; // e.g., "14:30"
+            if (!specificTime) {
+                alert("Please select a specific time.");
+                return;
+            }
+            const response = await fetch('/schedule_specific_time', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ specific_time: specificTime }),
+            });
+            const data = await response.json();
+            alert(data.message);
+            if (data.status === 'success') {
+                location.reload(); // Reload page to update UI status
+            }
+        }
+
+        async function cancelTimer() {
+            const response = await fetch('/cancel_timer', {
+                method: 'POST',
+            });
+            const data = await response.json();
+            alert(data.message);
+            if (data.status === 'success') {
+                location.reload(); // Reload page to update UI status
+            }
+        }
+
+        async function shutdownNow() {
+            if (confirm("Are you sure you want to shut down your PC immediately? This cannot be undone once started.")) {
+                const response = await fetch('/shutdown_now', {
+                    method: 'POST',
+                });
+                const data = await response.json();
+                alert(data.message);
+                if (data.status === 'success') {
+                    // The PC will shut down, so no need to reload the page here.
+                }
+            }
+        }
+
+        document.getElementById('startTimerForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default browser form submission
+            startTimer();
+        });
+
+        document.getElementById('startSpecificTimeForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default browser form submission
+            startSpecificTimeTimer();
+        });
+    </script>
+</body>
+</html>
