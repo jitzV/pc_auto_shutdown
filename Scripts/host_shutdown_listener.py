@@ -73,13 +73,13 @@ def main():
                 print(f"\nNo shutdown signal detected. Current signal value: {current_signal_value}. Exiting in: ", end='')
 
                 # Countdown timer that only updates the seconds
-                for i in range(10, 0, -1):
+                for i in range(1, 0, -1):
                     print(f"\rNo shutdown signal detected. Current signal value: {current_signal_value}. Exiting in: {i} seconds remaining... ", end='')
                     time.sleep(1)
             last_signal_value = current_signal_value
     except Exception as e:
             print(f"Error in host listener: {e}")
-    time.sleep(1) # Check the file every 10 seconds
+    #time.sleep(1) # Check the file every 10 seconds
 
 if __name__ == "__main__":
     main()
